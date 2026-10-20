@@ -26,9 +26,29 @@ void reserve(uint64_t addr, uint64_t size, const char* what) {
 void memory_init() {
     reserve(kModuleBase, 0x20000000, "modules");
     reserve(kHeapBase, kHeapMax, "heap");
+#if defined(__APPLE__)
+    const uint64_t size = kAliasSize + kStackSize + kKernelSize;
+    bool found = false;
+
+    for (uint64_t base = kHeapBase + kHeapMax; base <= kThunkBase - size; base += 0x10000000ull) {
+        if (!plat::reserve(base, size)) continue;
+
+        kAliasBase = base;
+        kStackBase = kAliasBase + kAliasSize;
+        kKernelBase = kStackBase + kStackSize;
+        g_kernel_next = kKernelBase;
+        found = true;
+        log("memory: alias %llx, stack %llx, kernel %llx", (unsigned long long)kAliasBase,
+            (unsigned long long)kStackBase, (unsigned long long)kKernelBase);
+        break;
+    }
+
+    if (!found) fatal("no contiguous 12 GiB block available for runtime regions");
+#else
     reserve(kAliasBase, kAliasSize, "alias");
     reserve(kStackBase, kStackSize, "stack");
     reserve(kKernelBase, kKernelSize, "kernel");
+#endif
     // The thunk range only names HLE functions: calls to it are dispatched by address (loader.cpp) and nothing is ever
     // mapped, read or run there, so a host mapping already in it is harmless. On a POCO F6 (Android 15, Adreno 735,
     // Xiaomi 24069PC21G) something sat at 0x6F00000000 and this was fatal: the app closed as soon as the game started.

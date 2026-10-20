@@ -28,13 +28,10 @@ uint64_t display_period_ns() {
 
 namespace {
 
-constexpr uint64_t kFakeDisplay = kKernelBase - 0x1000;  // opaque pointers, never dereferenced by the game
-constexpr uint64_t kFakeLayer = kKernelBase - 0x2000;
-
 void ok(CPU& c) { c.x[0] = 0; }
 
 void OpenDefaultDisplay(CPU& c) {
-    st<uint64_t>(c.x[0], kFakeDisplay);
+    st<uint64_t>(c.x[0], kKernelBase - 0x1000);
     c.x[0] = 0;
 }
 
@@ -42,7 +39,7 @@ void CreateLayer(CPU& c) {
     void* w = plat::create_window();
     log("vi: layer created -> native window %p", w);
     plat::release_window(w);
-    st<uint64_t>(c.x[0], kFakeLayer);
+    st<uint64_t>(c.x[0], kKernelBase - 0x2000);
     c.x[0] = 0;
 }
 
